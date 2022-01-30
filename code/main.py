@@ -88,8 +88,9 @@ print("-------------------")
 time.sleep(3)
 
 # Define multiple agents per node for accepting RPCs
-c = aiomas.Container((ipaddress, port))
-nodes = [c.spawn(Node) for i in range(1)]
+c = aiomas.Container.create((ipaddress, port))
+
+nodes = [Node(c) for i in range(2)]
 
 loop = asyncio.get_event_loop()
 # Start API server interface

@@ -38,6 +38,9 @@ class Node(aiomas.Agent):
     """
     Node
     """
+    def __init__(self, container):
+        super().__init__(container)
+        print("New Node on: ", self)
 
     class Successor:
         """
