@@ -33,14 +33,65 @@ def filter_node_response(data, immediate_neighbors=False, trace_log=False):
 
     return output
 
+class InitiatorAgent(aiomas.Agent):
+    """The initiator sends a *Call for Proposal (CfP)* to all bidders and
+    accepts the best proposal."""
+
+    async def run(self, bidder_addrs, target):
+        proposals = []
+        for addr in bidder_addrs:
+            # Connect to the BidderAgent
+            bidder_proxy = await self.container.connect(addr)
+
+            # Send a CfP to the agent.
+            proposal = await bidder_proxy.cfp(target)
+            # The reply is a list, so we need to make a "Proposal" from it:
+            proposal = Proposal(*proposal)
+
+            if proposal.value is not None:
+                proposals.append(proposal)
+
+        if proposals:
+            # Select the proposal that is closest to "target"
+            proposal_best = min(proposals, key=lambda p: (target - p.value))
+
+            # Proposal.bidder is a proxy to the respective agent.  We can use
+            # it to send a message to it:
+            result = await proposal_best.bidder.accept(proposal_best.value)
+            proposals.remove(proposal_best)
+
+            for proposal in proposals:
+                # The same as before.  "Proposal.bidder" is an agent proxy that
+                # we can use to reject the agent:
+                await proposal.bidder.reject(proposal.value)
+
+            return result
+        return None
 
 class Node(aiomas.Agent):
     """
     Node
     """
-    def __init__(self, container):
-        super().__init__(container)
-        print("New Node on: ", self)
+    @aiomas.expose
+    def cfp(self, cfp):
+        """Reply to a *cfp* with a "Proposal"."""
+        print('%s was called for proposal to %s.' % (self, cfp))
+        # Randomly choose "None" (no proposal) or a random number:
+        value = random.choice([None, random.random()])
+        # "self" can be sent to other agents and will be deserialized as
+        # a proxy to this agent:
+        return Proposal(bidder=self, value=value)
+
+    @aiomas.expose
+    def reject(self, reject):
+        """Our proposal got rejected :-(."""
+        print('%s was rejected for proposal %.2f.' % (self, reject))
+
+    @aiomas.expose
+    def accept(self, accept):
+        """Our proposal was the best.  Do we accept this outcome?"""
+        print('%s was accepted for proposal %.2f.' % (self, accept))
+        return random.choice(['nay', 'yay'])
 
     class Successor:
         """

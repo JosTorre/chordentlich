@@ -89,7 +89,7 @@ time.sleep(3)
 
 # Define multiple agents per node for accepting RPCs
 c = aiomas.Container.create((ipaddress, port))
-
+intitiator = InitiatorAgent(container)
 nodes = [Node(c) for i in range(2)]
 
 loop = asyncio.get_event_loop()
